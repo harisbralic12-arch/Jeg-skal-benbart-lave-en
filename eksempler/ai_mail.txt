@@ -1,0 +1,13 @@
+Kære kollegaer,
+
+I denne mail vil jeg kort gennemgå status på vores nye screeningsprojekt. Det er vigtigt at bemærke at projektet spiller en central rolle for afdelingen.
+
+Studier viser at kunstig intelligens kan potentielt tænkes at være et værdifuldt redskab i screeningen. Vi har derfor påbegyndt arbejdet med at anvende en ny algoritme. Det er ikke bare et teknisk projekt, det er en ny måde at arbejde på.
+
+Desuden har vi demonstreret at modellen fungerer på tværs af en mangfoldig patientgruppe. Data fortæller en klar historie om hvor meget tid vi kan spare. Resultaterne er bemærkelsesværdige og understreger potentialet i metoden — især for patienter i yderområderne.
+
+Derudover skal vi tage stilling til hvorvidt vi skal udvide projektet til flere klinikker, nye patientgrupper og andre sygdomme. Såfremt det besluttes, vil vi således kunne starte allerede i foråret.
+
+Sammenfattende ser fremtiden lys ud, og jeg ser frem til den spændende rejse vi har foran os.
+
+Bedste hilsner

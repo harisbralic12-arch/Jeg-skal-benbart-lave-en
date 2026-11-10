@@ -1,0 +1,7 @@
+Purpose: To evaluate the diagnostic accuracy of a deep learning algorithm for detecting referable diabetic retinopathy on OCT images.
+
+Methods: We included 1,204 eyes from 640 patients examined at Rigshospitalet between 2019 and 2023. Best-corrected visual acuity (BCVA) and central subfield thickness were recorded at baseline. The algorithm was compared with grading by two masked retina specialists.
+
+Results: Sensitivity was 91.2% and specificity was 87.5%. Studies show that this level of performance could potentially be sufficient for screening. Moreover, AMD did not reduce accuracy. Data tells a story of untapped potential — the algorithm is a testament to the power of AI.
+
+Conclusion: The algorithm was associated with high diagnostic accuracy and may be suitable for screening, but external validation is needed.
