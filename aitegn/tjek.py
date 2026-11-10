@@ -22,6 +22,8 @@ from . import regler
 
 # Regler der er sat ud af kraft i videnskabelig tekst (se STIL.md)
 SLAAET_FRA_I_VIDENSKAB = {9, 11, 12, 15, 16}
+# Regel 21 ("serves as a control") og kildeforbehold er normalt sprog i manuskripter
+SLAAET_FRA_I_VIDENSKAB_EKSTRA = {21}
 
 FLAGS = re.IGNORECASE | re.UNICODE
 
@@ -90,13 +92,13 @@ def ord_antal(s: str) -> int:
     return len(re.findall(r"\w+", s))
 
 
-def tjek(tekst: str, videnskabelig: bool = False) -> tuple[list[Fund], dict]:
+def tjek(tekst: str, videnskabelig: bool = False, markdown_i_docx: bool = False) -> tuple[list[Fund], dict]:
     fund: list[Fund] = []
 
     brugt: dict[int, list[tuple[int, int]]] = {}
 
     def tilfoej(regel: int, start: int, slut: int, besked: str):
-        if videnskabelig and regel in SLAAET_FRA_I_VIDENSKAB:
+        if videnskabelig and (regel in SLAAET_FRA_I_VIDENSKAB or regel in SLAAET_FRA_I_VIDENSKAB_EKSTRA):
             return
         if slut > start:
             if any(start < b and a < slut for a, b in brugt.get(regel, [])):
@@ -109,6 +111,7 @@ def tjek(tekst: str, videnskabelig: bool = False) -> tuple[list[Fund], dict]:
             for m in re.finditer(mønster, tekst, FLAGS):
                 tilfoej(regel, m.start(), m.end(), besked)
 
+    kør_liste(1, regler.HULLER)
     kør_liste(2, regler.VAGE_KILDER)
     kør_liste(3, regler.PROCES)
     kør_liste(4, regler.META)
@@ -123,6 +126,16 @@ def tjek(tekst: str, videnskabelig: bool = False) -> tuple[list[Fund], dict]:
     kør_liste(9, regler.FORBEHOLD)
     kør_liste(10, regler.FIGURER)
     kør_liste(17, regler.BESJAELING)
+    kør_liste(19, regler.BETYDNING)
+    kør_liste(20, regler.OVERFLADISK)
+    kør_liste(21, regler.KOPULA)
+    kør_liste(22, regler.CHATBOT)
+    kør_liste(22, regler.ARTEFAKTER)
+    if not videnskabelig:
+        kør_liste(22, regler.KILDEFORBEHOLD)
+    kør_liste(23, regler.PROCESFORSIKRING)
+    kør_liste(24, regler.KUNDESERVICE)
+    kør_liste(26, regler.UDFORDRINGER)
 
     afsnit = find_afsnit(tekst)
     alle_saetninger: list[int] = []
@@ -153,6 +166,12 @@ def tjek(tekst: str, videnskabelig: bool = False) -> tuple[list[Fund], dict]:
         if cv < 0.35:
             tilfoej(11, 0, 0, f"Sætningerne er næsten lige lange (snit {snit:.0f} ord, "
                                f"variation {cv:.2f}). Bland korte og lange.")
+        # Nyere modeller holder sætninger mellem 8 og 20 ord (Wikipedia, 2026)
+        andel = sum(8 <= n <= 20 for n in alle_saetninger) / len(alle_saetninger)
+        stats["andel_8_til_20_ord"] = round(andel, 2)
+        if len(alle_saetninger) >= 8 and andel >= 0.85:
+            tilfoej(11, 0, 0, f"{andel:.0%} af sætningerne er mellem 8 og 20 ord. "
+                               "Det er typisk for nyere AI-modeller. Skriv nogle meget korte og nogle lange.")
         # Lange stræk af ens sætninger
         stræk = 1
         for x, y in zip(alle_saetninger, alle_saetninger[1:]):
@@ -197,6 +216,17 @@ def tjek(tekst: str, videnskabelig: bool = False) -> tuple[list[Fund], dict]:
         pl = [ord_antal(p) for p in punkter]
         if len(pl) >= 4 and statistics.mean(pl) and statistics.pstdev(pl) / statistics.mean(pl) < 0.25:
             tilfoej(14, 0, 0, "Alle punkter fylder næsten lige meget.")
+    for m in re.finditer(regler.EMOJI, tekst, re.MULTILINE):
+        tilfoej(14, m.start(), m.end(), "Emoji i starten af en overskrift eller et punkt.")
+    for m in re.finditer(r"^\s*(?:[-*•]|\d+[.)])\s+(\*\*|__)[^*_\n]{1,40}:?(\*\*|__):?", tekst, re.MULTILINE):
+        tilfoej(14, m.start(), m.end(), "Punkt med fed overskrift (\"inline header\"). Typisk AI-liste.")
+    for m in re.finditer(r"^\s*#{1,6}\s+(.+)$", tekst, re.MULTILINE):
+        småord = {"and", "or", "the", "of", "in", "for", "to", "a", "an", "on", "with", "at", "by"}
+        ordene = [o for o in re.findall(r"[A-Za-z]+", m.group(1)) if o.lower() not in småord]
+        if len(ordene) >= 3 and all(o[0].isupper() for o in ordene):
+            tilfoej(14, m.start(), m.end(), "Overskrift i Title Case. Skriv kun første ord med stort.")
+    if markdown_i_docx:
+        tilfoej(22, 0, 0, "Word-dokumentet indeholder Markdown (** eller #). Teksten er kopieret fra en chatbot.")
     if overskrifter and stats["ord"] < 400:
         tilfoej(14, 0, 0, f"{len(overskrifter)} overskrifter i en tekst på {stats['ord']} ord.")
 
@@ -226,12 +256,14 @@ def tjek(tekst: str, videnskabelig: bool = False) -> tuple[list[Fund], dict]:
 
     fund.sort(key=lambda f: (f.linje, f.regel))
     stats["fund"] = len(fund)
+    stats["staerke_fund"] = sum(f.regel in regler.STAERKE_REGLER for f in fund)
     stats["fund_per_100_ord"] = round(100 * len(fund) / stats["ord"], 1) if stats["ord"] else 0
     return fund, stats
 
 
 REGELNAVNE = {
     0: "Forkortelse",
+    1: "Hul",
     2: "Kilde",
     3: "Proces",
     4: "Meta",
@@ -246,6 +278,13 @@ REGELNAVNE = {
     14: "Formatering",
     17: "Besjæling",
     18: "Slutning",
+    19: "Oppustet betydning",
+    20: "Overfladisk analyse",
+    21: "Omskrevet 'er'",
+    22: "Chatbot-rest",
+    23: "Procesforsikring",
+    24: "Kundeservice",
+    26: "Formel",
 }
 
 
@@ -265,6 +304,9 @@ def udskriv(fund: list[Fund], stats: dict, farve: bool) -> str:
     ud.append("")
     ud.append(f"{fed}{stats['fund']} fund i {stats['ord']} ord "
               f"({stats['fund_per_100_ord']} per 100 ord).{nul}")
+    if stats.get("staerke_fund"):
+        ud.append(f"{gul}{stats['staerke_fund']} stærke tegn (regel 22): rester af en chatbot-samtale. "
+                  f"Dem skriver mennesker næsten aldrig.{nul}")
     if "saetningslaengde_snit" in stats:
         ud.append(f"Sætninger: {stats['saetninger']}, snitlængde {stats['saetningslaengde_snit']} ord, "
                   f"variation {stats['saetningslaengde_variation']} (under 0,35 er monotont).")
@@ -280,7 +322,8 @@ def main(argv=None) -> int:
     a = p.parse_args(argv)
 
     tekst = laes_fil(a.fil)
-    fund, stats = tjek(tekst, a.videnskabelig)
+    md_docx = a.fil.lower().endswith(".docx") and bool(re.search(r"\*\*\S|^#{1,6} ", tekst, re.MULTILINE))
+    fund, stats = tjek(tekst, a.videnskabelig, md_docx)
     if a.json:
         print(json.dumps({"stats": stats, "fund": [asdict(f) for f in fund]}, ensure_ascii=False, indent=2))
     else:
