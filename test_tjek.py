@@ -31,6 +31,10 @@ class TestTjek(unittest.TestCase):
         self.assertEqual(len(besked), 1)
         self.assertIn("AMD", besked[0])
 
+    def test_forkortelse_med_praefiks(self):
+        tekst = "Anti-vascular endothelial growth factor (anti-VEGF) is used. VEGF binds."
+        self.assertNotIn(0, regler_fundet(tekst, videnskabelig=True))
+
     def test_fagterm_central(self):
         self.assertNotIn(6, regler_fundet("Central subfield thickness was 280 µm."))
         self.assertIn(6, regler_fundet("Projektet er centralt for afdelingen."))

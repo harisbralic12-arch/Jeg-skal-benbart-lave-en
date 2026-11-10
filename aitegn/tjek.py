@@ -248,9 +248,10 @@ def tjek(tekst: str, videnskabelig: bool = False, markdown_i_docx: bool = False)
             if ab in set_ or re.fullmatch(r"[IVXLCDM]+", ab):
                 continue
             set_.add(ab)
-            før = tekst[max(0, m.start() - 1):m.start()]
+            # Defineret = står i parentes, evt. med præfiks som "(anti-VEGF)"
+            før = tekst[max(0, m.start() - 15):m.start()]
             efter = tekst[m.end():m.end() + 1]
-            if not (før == "(" and efter in (")", ",", ";")):
+            if not (re.search(r"\([\w-]*$", før) and efter in (")", ",", ";")):
                 tilfoej(0, m.start(), m.end(),
                         f"»{ab}« bruges uden at være skrevet helt ud først.")
 
